@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Rock · Paper · Scissors — Versus</title>
+  <style>
+    :root{
+      --bg:#0b0f14;--card:#121824;--muted:#9fb0ca;--accent:#5aa9ff;--win:#22c55e;--lose:#ef4444;--tie:#f59e0b;--border:#1f2937;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 10%, #0d1522 0%, var(--bg) 60%);
+      color:#e5eeff;min-height:100svh;display:grid;place-items:center;padding:clamp(12px, 2.5vw, 24px);
+    }
+    .app{width:100%;max-width:900px;display:grid;gap:12px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    header h1{font-size:clamp(18px,5vw,28px);margin:0;letter-spacing:.3px}
+    .muted{color:var(--muted);font-size:13px}
+
+    .controls{display:grid;gap:12px}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    label{font-size:14px;color:var(--muted)}
+    select, .seg, button.btn{background:#0f1623;border:1px solid var(--border);color:#e5eeff;border-radius:12px;padding:10px 12px;font-size:14px}
+    select{min-width:120px}
+    .seg{display:inline-flex;gap:4px}
+    .seg button{background:transparent;border:0;color:#e5eeff;padding:10px 12px;border-radius:10px;cursor:pointer}
+    .seg button[aria-pressed="true"]{background:rgba(90,169,255,.16);border:1px solid rgba(90,169,255,.35)}
+
+    .board{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:780px){.board{grid-template-columns:1.25fr .75fr}}
+
+    .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    button.choice{background:var(--card);border:1px solid var(--border);color:#e5eeff;border-radius:14px;padding:16px 10px;cursor:pointer;transition:transform .07s ease,border-color .2s ease,background .2s ease;position:relative;overflow:hidden;touch-action:manipulation;min-height:84px}
+    button.choice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    button.choice:hover{border-color:#2c3a52}
+    button.choice:active{transform:translateY(1px) scale(.99)}
+    button.choice[disabled]{opacity:.55;filter:grayscale(.2);cursor:not-allowed}
+    .glyph{display:block;font-size:clamp(30px,9vw,48px);line-height:1}
+    .label{margin-top:6px;font-size:14px;color:var(--muted)}
+
+    .status{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:560px){.status{grid-template-columns:1fr 1fr}}
+    .vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;text-align:center;padding:10px;border-radius:12px;background:#0f1623;border:1px dashed var(--border)}
+    .pick{font-size:16px}
+    .pick .big{font-size:28px;display:inline-block;margin-right:6px}
+    .result{text-align:center;font-weight:700;padding:10px 12px;border-radius:10px}
+    .result.win{background:rgba(34,197,94,.15);color:var(--win);border:1px solid rgba(34,197,94,.25)}
+    .result.lose{background:rgba(239,68,68,.15);color:var(--lose);border:1px solid rgba(239,68,68,.25)}
+    .result.tie{background:rgba(245,158,11,.15);color:var(--tie);border:1px solid rgba(245,158,11,.25)}
+
+    .scores{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .scorebox{background:#0f1623;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:baseline}
+    .scorebox b{font-size:20px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{background:linear-gradient(180deg,rgba(90,169,255,.2),rgba(90,169,255,.1));border:1px solid rgba(90,169,255,.35);color:#d9ecff;padding:10px 14px;border-radius:12px;cursor:pointer}
+    .btn.secondary{background:transparent;border-color:var(--border);color:var(--muted)}
+
+    .history{max-height:260px;overflow:auto;padding-right:6px}
+    .history ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+    .history li{background:#0f1623;border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+    .history small{color:var(--muted)}
+
+    footer{text-align:center;color:var(--muted);font-size:12px}
+    code.kbd{background:#0f1623;border:1px solid var(--border);padding:2px 6px;border-radius:6px}
+
+    /* Effects */
+    .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+    .piece{position:absolute;width:8px;height:14px;border-radius:2px;opacity:.9}
+    .sad{animation: sad 600ms ease-in-out}
+    @keyframes sad{10%{transform:translateY(-1px)}20%{transform:translateY(0)}40%{transform:translateX(-3px)}60%{transform:translateX(3px)}80%{transform:translateX(-1px)}100%{transform:translateX(0)}}
+
+    /* Mobile safe hit targets */
+    button{min-height:44px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="card">
+      <header>
+        <h1>Rock · Paper · Scissors — Versus</h1>
+        <div class="muted">Tap <code class="kbd">Start Match</code> → pick with buttons or <code class="kbd">1</code>/<code class="kbd">2</code>/<code class="kbd">3</code>. Reset with <code class="kbd">R</code></div>
+      </header>
+      <div class="controls">
+        <div class="row" role="group" aria-label="Opponent">
+          <label>Opponent:</label>
+          <div class="seg" id="opponentSeg">
+            <button type="button" data-val="cpu" aria-pressed="true">Computer</button>
+            <button type="button" data-val="friend" aria-pressed="false">Friend (same device)</button>
+          </div>
+        </div>
+        <div class="row" role="group" aria-label="Match Mode">
+          <label>Match:</label>
+          <select id="modeType" aria-label="Mode type">
+            <option value="bestof" selected>Best of</option>
+            <option value="firstto">First to</option>
+          </select>
+          <select id="modeTarget" aria-label="Target">
+            <option>1</option>
+            <option>2</option>
+            <option selected>3</option>
+            <option>5</option>
+          </select>
+          <button class="btn" id="startMatch">Start Match</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="board">
+      <div class="card">
+        <div class="choices" role="group" aria-label="Your choice">
+          <button class="choice" data-choice="rock" aria-label="Rock (1)">
+            <span class="glyph" aria-hidden>
+              <!-- Rock SVG -->
+              <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 26l10-10h14l9 7 5 11-6 16-14 6-13-4-7-12 2-10z" fill="#8a99a8"/>
+                <path d="M23 16l6 8 8-8" stroke="#5a6a7a" stroke-width="3" stroke-linecap="round"/>
+                <path d="M14 26l7 7m4 13l14-6m-20 2l-7-12" stroke="#5a6a7a" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="label">Rock</span>
+          </button>
+          <button class="choice" data-choice="paper" aria-label="Paper (2)">
+            <span class="glyph" aria-hidden>📄</span>
+            <span class="label">Paper</span>
+          </button>
+          <button class="choice" data-choice="scissors" aria-label="Scissors (3)">
+            <span class="glyph" aria-hidden>✂️</span>
+            <span class="label">Scissors</span>
+          </button>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="status">
+          <div class="vs" aria-live="polite" aria-atomic="true">
+            <div class="pick" id="youPick">You: <span class="big">—</span></div>
+            <div id="turnTag">VS</div>
+            <div class="pick" id="cpuPick">Computer: <span class="big">—</span></div>
+          </div>
+          <div class="result tie" id="result">Press <strong>Start Match</strong> to begin</div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="scores">
+          <div class="scorebox"><small id="p1Label">You</small> <b id="youScore">0</b></div>
+          <div class="scorebox"><small id="p2Label">Computer</small> <b id="cpuScore">0</b></div>
+          <div class="scorebox"><small>Ties</small> <b id="tieScore">0</b></div>
+          <div class="actions">
+            <button class="btn secondary" id="clearHistory">Clear History</button>
+            <button class="btn secondary" id="resetBtn" aria-label="Reset scores (R)">Reset Scores</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card history">
+        <h3 style="margin-top:0">Round History</h3>
+        <ul id="history"></ul>
+      </div>
+    </section>
+
+    <footer>
+      Mobile-friendly • Accessible • No external libs • Respects <code class="kbd">prefers-reduced-motion</code>
+    </footer>
+  </main>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <script>
+    const CHOICES = ["rock","paper","scissors"];
+
+    // Elements
+    const youPick = document.getElementById('youPick');
+    const oppPick = document.getElementById('cpuPick');
+    const resultEl = document.getElementById('result');
+    const historyEl = document.getElementById('history');
+    const youScoreEl = document.getElementById('youScore');
+    const oppScoreEl = document.getElementById('cpuScore');
+    const tieScoreEl = document.getElementById('tieScore');
+    const resetBtn = document.getElementById('resetBtn');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const confettiRoot = document.getElementById('confetti');
+    const opponentSeg = document.getElementById('opponentSeg');
+    const modeTypeSel = document.getElementById('modeType');
+    const modeTargetSel = document.getElementById('modeTarget');
+    const startMatchBtn = document.getElementById('startMatch');
+    const turnTag = document.getElementById('turnTag');
+    const p1Label = document.getElementById('p1Label');
+    const p2Label = document.getElementById('p2Label');
+
+    // State
+    let scores = { p1:0, p2:0, tie:0 };
+    let opponent = 'cpu'; // 'cpu' | 'friend'
+    let modeType = 'bestof'; // 'bestof' | 'firstto'
+    let modeTarget = 3; // number
+    let p1PendingChoice = null; // for friend mode turns
+    let matchState = 'idle'; // 'idle' | 'active' | 'ended'
+
+    // Utils
+    function prefersReducedMotion(){
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    function cpuChoice(){ return CHOICES[Math.floor(Math.random()*CHOICES.length)]; }
+
+    function labels(){
+      return opponent==='cpu' ? {p1:'You', p2:'Computer'} : {p1:'P1', p2:'P2'};
+    }
+    function applyLabels(){
+      const L = labels();
+      p1Label.textContent = L.p1;
+      p2Label.textContent = L.p2;
+      youPick.innerHTML = `${L.p1}: <span class="big">—</span>`;
+      oppPick.innerHTML = `${L.p2}: <span class="big">—</span>`;
+    }
+
+    function setChoicesEnabled(enabled){
+      document.querySelectorAll('button.choice').forEach(b=> b.disabled = !enabled);
+    }
+    function setControlsDisabled(disabled){
+      modeTypeSel.disabled = disabled;
+      modeTargetSel.disabled = disabled;
+      [...opponentSeg.children].forEach(b=> b.disabled = disabled);
+    }
+    function setStartButton(){
+      startMatchBtn.textContent = matchState==='active' ? 'Reset Match' : 'Start Match';
+    }
+
+    function decide(a,b){
+      if(a===b) return 'tie';
+      if((a==='rock'&&b==='scissors')||(a==='paper'&&b==='rock')||(a==='scissors'&&b==='paper')) return 'p1';
+      return 'p2';
+    }
+
+    function updateScores(winner){
+      if(winner==='p1') scores.p1++;
+      else if(winner==='p2') scores.p2++;
+      else scores.tie++;
+      youScoreEl.textContent = scores.p1;
+      oppScoreEl.textContent = scores.p2;
+      tieScoreEl.textContent = scores.tie;
+    }
+
+    function setResult(type, text){
+      resultEl.classList.remove('win','lose','tie','sad');
+      if(type==='p1') { resultEl.classList.add('win'); resultEl.textContent = text || 'You win!'; blastConfetti(); }
+      else if(type==='p2') { resultEl.classList.add('lose'); resultEl.textContent = text || 'You lose 😞'; if(!prefersReducedMotion()) resultEl.classList.add('sad'); }
+      else { resultEl.classList.add('tie'); resultEl.textContent = text || "It's a tie"; }
+    }
+
+    function pushHistory(p1, p2, outcome){
+      const L = labels();
+      const li = document.createElement('li');
+      const outcomeText = outcome==='p1'?`${L.p1.toUpperCase()} WINS`: outcome==='p2'?`${L.p2.toUpperCase()} WINS`:'TIE';
+      li.innerHTML = `<span>${iconHTML(p1)} vs ${iconHTML(p2)} — <strong>${outcomeText}</strong></span> <small>${new Date().toLocaleTimeString()}</small>`;
+      historyEl.prepend(li);
+    }
+
+    function rockSVG(size=28){
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="vertical-align:-6px">
+          <path d="M13 26l10-10h14l9 7 5 11-6 16-14 6-13-4-7-12 2-10z" fill="#8a99a8"/>
+          <path d="M23 16l6 8 8-8" stroke="#5a6a7a" stroke-width="3" stroke-linecap="round"/>
+          <path d="M14 26l7 7m4 13l14-6m-20 2l-7-12" stroke="#5a6a7a" stroke-width="3" stroke-linecap="round"/>
+        </svg>`;
+    }
+    function iconHTML(choice){
+      if(choice==='rock') return rockSVG(28);
+      if(choice==='paper') return '📄';
+      return '✂️';
+    }
+
+    function roundFriend(choice){
+      if(matchState!=='active') return nudgeToStart();
+      // Turn-based: first P1 selects, then P2
+      const L = labels();
+      if(p1PendingChoice===null){
+        p1PendingChoice = choice;
+        youPick.innerHTML = `${L.p1}: <span class="big">${iconHTML(choice)}</span>`;
+        oppPick.innerHTML = `${L.p2}: <span class="big">—</span>`;
+        turnTag.textContent = `Pass to ${L.p2}`;
+        setResult('tie', `${L.p2}: make your pick`);
+        return;
+      }
+      const p1 = p1PendingChoice; const p2 = choice; p1PendingChoice = null;
+      playResolvedRound(p1,p2);
+    }
+
+    function roundCPU(choice){
+      if(matchState!=='active') return nudgeToStart();
+      const p1 = choice; const p2 = cpuChoice();
+      playResolvedRound(p1,p2);
+    }
+
+    function playResolvedRound(p1, p2){
+      const L = labels();
+      youPick.innerHTML = `${L.p1}: <span class="big">${iconHTML(p1)}</span>`;
+      oppPick.innerHTML = `${L.p2}: <span class="big">${iconHTML(p2)}</span>`;
+      turnTag.textContent = 'VS';
+      const outcome = decide(p1,p2);
+      updateScores(outcome);
+      pushHistory(p1,p2,outcome);
+      if(checkMatchEnd()) return; // if ended, do not overwrite end message
+      setResult(outcome);
+    }
+
+    function checkMatchEnd(){
+      const target = Number(modeTarget);
+      const needed = modeType==='bestof' ? Math.ceil(target/2) : target;
+      const reached = scores.p1>=needed || scores.p2>=needed;
+      if(modeType==='bestof'){
+        const totalPlayed = scores.p1 + scores.p2 + scores.tie;
+        if(totalPlayed>=target || reached){ endMatch(); return true; }
+      } else {
+        if(reached){ endMatch(); return true; }
+      }
+      return false;
+    }
+
+    function endMatch(){
+      const L = labels();
+      const winner = scores.p1>scores.p2 ? 'p1' : scores.p2>scores.p1 ? 'p2' : 'tie';
+      if(winner==='p1') setResult('p1', `${L.p1} wins the match! (${labelMode()}) — Press Start Match to play again`);
+      else if(winner==='p2') setResult('p2', `${L.p2} wins the match! (${labelMode()}) — Press Start Match to play again`);
+      else setResult('tie', `Match tied (${labelMode()}) — Press Start Match to play again`);
+      setMatchState('ended');
+    }
+
+    function labelMode(){ return (modeType==='bestof'?`Best of ${modeTarget}`:`First to ${modeTarget}`); }
+
+    function reset(){
+      scores={p1:0,p2:0,tie:0};
+      youScoreEl.textContent=oppScoreEl.textContent=tieScoreEl.textContent='0';
+      historyEl.innerHTML='';
+      applyLabels();
+      setResult('tie','Match ready — make your move');
+      turnTag.textContent='VS';
+      p1PendingChoice=null;
+    }
+
+    function nudgeToStart(){
+      resultEl.classList.remove('win','lose');
+      resultEl.classList.add('tie','sad');
+      resultEl.textContent = 'Press Start Match to begin';
+      setTimeout(()=> resultEl.classList.remove('sad'), 600);
+    }
+
+    function blastConfetti(){
+      if(prefersReducedMotion()) return;
+      const colors = ['#60a5fa','#f472b6','#fbbf24','#34d399','#c084fc','#f87171'];
+      const count = 120;
+      for(let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className='piece';
+        el.style.background = colors[i%colors.length];
+        el.style.left = (Math.random()*100)+'%';
+        el.style.top = '-10px';
+        const fall = 800 + Math.random()*800;
+        const drift = (Math.random()*2-1)*60;
+        el.animate([
+          { transform:`translate(0,0) rotate(0deg)`, opacity:1 },
+          { transform:`translate(${drift}px, 100vh) rotate(${Math.random()*720-360}deg)`, opacity:0.9 }
+        ], { duration: fall, easing:'cubic-bezier(.2,.8,.2,1)' });
+        confettiRoot.appendChild(el);
+        setTimeout(()=> el.remove(), fall+50);
+      }
+    }
+
+    function setMatchState(state){
+      matchState = state;
+      setStartButton();
+      if(state==='active'){
+        setChoicesEnabled(true);
+        setControlsDisabled(true);
+      } else {
+        setChoicesEnabled(false);
+        setControlsDisabled(false);
+        if(state==='idle'){
+          setResult('tie','Press Start Match to begin');
+        }
+      }
+    }
+
+    // Event wiring
+    document.querySelectorAll('button.choice').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const choice = btn.dataset.choice;
+        if(opponent==='cpu') roundCPU(choice); else roundFriend(choice);
+      });
+    });
+
+    opponentSeg.addEventListener('click', (e)=>{
+      const b = e.target.closest('button'); if(!b) return;
+      opponent = b.dataset.val; [...opponentSeg.children].forEach(x=>x.setAttribute('aria-pressed', x===b? 'true':'false'));
+      applyLabels();
+      // When changing opponent while idle/ended keep state; when active it's disabled anyway
+    });
+
+    resetBtn.addEventListener('click', ()=>{ if(matchState==='active'){ reset(); setResult('tie', `Match reset — ${labelMode()}`); } else nudgeToStart(); });
+    clearHistoryBtn.addEventListener('click', ()=> historyEl.innerHTML='');
+
+    startMatchBtn.addEventListener('click', ()=>{
+      if(matchState!=='active'){
+        // Start a new match
+        modeType = modeTypeSel.value; modeTarget = Number(modeTargetSel.value);
+        reset();
+        setMatchState('active');
+        setResult('tie', `Match started — ${labelMode()}`);
+      } else {
+        // Reset current match but stay active
+        modeType = modeTypeSel.value; modeTarget = Number(modeTargetSel.value);
+        reset();
+        setResult('tie', `Match reset — ${labelMode()}`);
+      }
+    });
+
+    modeTypeSel.addEventListener('change', ()=>{ modeType = modeTypeSel.value; });
+    modeTargetSel.addEventListener('change', ()=>{ modeTarget = Number(modeTargetSel.value); });
+
+    // Keyboard shortcuts: 1/2/3 and R
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='1') document.querySelector('button.choice[data-choice="rock"]').click();
+      else if(e.key==='2') document.querySelector('button.choice[data-choice="paper"]').click();
+      else if(e.key==='3') document.querySelector('button.choice[data-choice="scissors"]').click();
+      else if(e.key.toLowerCase()==='r') resetBtn.click();
+    });
+
+    // Init
+    applyLabels();
+    setMatchState('idle');
+  </script>
+</body>
+</html>
